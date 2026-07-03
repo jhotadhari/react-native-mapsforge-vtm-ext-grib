@@ -2,7 +2,11 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "react-native-mapsforge-vtm-ext-grib": ["./src/index"]
+      "react-native-mapsforge-vtm-ext-grib": ["./src/index"],
+      "react-native-mapsforge-vtm": ["../react-native-mapsforge-vtm/src/index.tsx"],
+      "react-native-mapsforge-vtm/reanimated": [
+        "../react-native-mapsforge-vtm/src/reanimated/index.ts"
+      ]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
