@@ -96,40 +96,97 @@ source. The rendering layers don't care where the data came from.
 
 If we go with on-device parsing (Option B or C above), which library should we use?
 
-| Library | GRIB1 | GRIB2 | JPEG2000 | Pure Java | Android | APK impact |
+#### Option A: JGribX (lightweight)
+
+Pure Java, MIT license, JDK 8+. Minimal dependencies — no Guava, no protobuf, no JNI.
+Actively maintained with Gradle build.
+
+| Pros | Cons |
+|---|---|
+| Small APK footprint (~500 KB) | GRIB2 support is partial — some templates missing |
+| Works on any Android version | JPEG2000 support unknown (NOAA GFS uses JPEG2000) |
+| Simple API: `GribFile` → `getRecord()` → `getValue(lat, lon)` | May not handle complex packing, PNG packing, or second-order packing |
+| Easy to consume via jitpack | Single maintainer — bus-factor risk |
+
+#### Option B: netCDF-Java / cdm-core (heavy, most complete)
+
+Unidata's reference Java library for scientific data formats. Full GRIB1 and GRIB2
+support including all WMO templates and packing methods. Battle-tested for decades.
+
+| Pros | Cons |
+|---|---|
+| Handles every GRIB template and packing method | `minSdkVersion 26` — cuts off ~10–15% of Android devices |
+| JPEG2000 via bundled `edu.ucar:jj2000` | Large transitive deps: Guava, Joda-Time, protobuf-java, ehcache (~10+ MB) |
+| Also reads netCDF, HDF5, BUFR — future-proof for other met formats | Dex method count issues — may need ProGuard / R8 tuning |
+| Active maintenance, large user community | `java.lang.invoke.MethodHandles` not available on API < 26 |
+| `Grib2Json` CLI tool already exists — can reuse for server-side too | Dependency conflicts with common Android libs (Guava `ListenableFuture`) |
+
+**Why it's heavy:** netCDF-Java wasn't designed for mobile. It targets server/desktop
+JVM where dependency size and method count don't matter. Making it work on Android
+requires accepting `minSdkVersion 26` and investing in ProGuard configuration.
+
+#### Option C: ecCodes Java bindings (maximum capability, maximum pain)
+
+ECMWF's reference C/Fortran library for GRIB — the canonical implementation. Java
+bindings are a thin JNI wrapper around the native C library.
+
+| Pros | Cons |
+|---|---|
+| Canonical GRIB decoder — handles everything | Native `.so` cross-compilation per ABI (arm64, armv7, x86, x86_64) |
+| Used by every national weather service | 20–50 MB per ABI — enormous APK |
+| Full JPEG2000, PNG, complex packing support | NDK + Fortran toolchain required for builds |
+| Regular updates tracking WMO standard changes | No Android build support from ECMWF |
+| | Maintenance burden: rebuild for every ecCodes release |
+| | No known production Android app uses this |
+
+**Why it's difficult:** ecCodes is a large C library with Fortran components. Cross-compiling
+it for Android requires the NDK, a Fortran cross-compiler, and per-ABI builds. Each
+architecture adds 20–50 MB to the APK. Updating ecCodes means rebuilding all ABIs.
+This is the nuclear option — maximum GRIB compatibility at maximum engineering cost.
+
+#### Option D: DTN grib-library (unfinished)
+
+Originally by MeteoGroup, now at DTN. Pure Java, WMO spec-compliant. Separate
+`Grib1CollectionReader` / `Grib2CollectionReader` classes.
+
+| Pros | Cons |
+|---|---|
+| Clean API design | No releases — no Maven coordinates |
+| Separate GRIB1/GRIB2 readers | Unclear maintenance status (archived on GitHub, moved to Bitbucket) |
+| Small footprint | JPEG2000 support unknown |
+| | Lombok dependency (adds annotation processor to Android build) |
+
+**Verdict:** Useful as a reference implementation but not as a dependency.
+
+#### Option E: Custom minimal parser
+
+Write a targeted GRIB parser that only handles the specific templates and packing
+methods used by our target data source (e.g., NOAA GFS).
+
+| Pros | Cons |
+|---|---|
+| Absolute minimal footprint (~100 KB) | Significant up-front development |
+| Full control — no dependency surprises | Only handles targeted templates |
+| Can be optimized for mobile (streaming, sparse grids) | Ongoing maintenance as data sources change |
+| | Error-prone for complex GRIB features |
+
+**Requires:** `edu.ucar:jj2000` (~800 KB) for JPEG2000-compressed GRIB2 sections.
+
+#### Summary table
+
+| Library | GRIB1 | GRIB2 | JPEG2000 | Pure Java | Android | APK |
 |---|---|---|---|---|---|---|
 | **JGribX** | Yes | Partial | Unknown | Yes | ✅ | ~500 KB |
-| **netCDF-Java (cdm-core)** | Yes | Full | Yes (via jj2000) | Yes | ⚠️ SDK 26+ | 10+ MB deps |
-| **ecCodes Java bindings** | Full | Full | Yes | No (JNI) | ❌ Cross-compile per ABI | 20–50 MB per ABI |
+| **netCDF-Java** | Yes | Full | Yes | Yes | ⚠️ SDK 26+ | 10+ MB |
+| **ecCodes Java** | Full | Full | Yes | No (JNI) | ❌ | 20–50 MB/ABI |
 | **DTN grib-library** | Yes | Yes | Unknown | Yes | ✅ (no release) | Small |
-| **Custom minimal parser** | Targeted | Targeted | Via jj2000 | Yes | ✅ | ~100 KB |
+| **Custom parser** | Targeted | Targeted | Via jj2000 | Yes | ✅ | ~100 KB |
 
-**JGribX** is the best lightweight candidate:
-- Pure Java, MIT license, JDK 8+, Gradle build
-- Minimal dependencies — no Guava, no protobuf, no JNI
-- Actively maintained
-- **Unknown:** whether it handles JPEG2000-compressed GRIB2 (the format NOAA GFS uses).
-  If not, integrating `edu.ucar:jj2000` into a fork is feasible (~800KB).
-
-**netCDF-Java** is the most complete but heaviest:
-- Full GRIB1/2 template support, battle-tested
-- `minSdkVersion 26` cuts off ~10–15% of Android devices (no `java.lang.invoke.MethodHandles`
-  on older API levels)
-- Large transitive dependency tree (Guava, Joda-Time, protobuf-java, ehcache) — Dex method
-  count issues, potential `Duplicate class` conflicts
-
-**ecCodes Java:** Not viable for Android. Requires cross-compiling the C library
-`libeccodes.so` for each ABI via NDK, tens of megabytes per architecture. No known
-production Android app uses it.
-
-**Custom minimal parser:** Feasible if we only target a specific data source (e.g. NOAA GFS
-with known templates). GRIB1 and simple-packed GRIB2 are straightforward binary formats.
-JPEG2000-compressed sections still need `edu.ucar:jj2000`.
-
-**Recommendation:** Start with a server-side conversion (Option A) to ship quickly.
-Validate JGribX against your actual data source when adding offline support. If JGribX
-can't handle your GRIB files, either fork it with jj2000 integration or build a minimal
-parser for the specific templates you need.
+**Recommendation:** Start with server-side conversion (Decision #2, Option A) to ship
+quickly. When adding offline support, try JGribX first against your actual data. If it
+can't handle your GRIB files, fall back to netCDF-Java with `minSdkVersion 26` (accepting
+the device cutoff) — its completeness and community support outweigh the APK size cost
+for a weather-critical application. ecCodes Java is not practical for mobile.
 
 ---
 
