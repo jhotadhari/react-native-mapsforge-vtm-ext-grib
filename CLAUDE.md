@@ -122,13 +122,43 @@ annotations. After codegen runs, it should be switched to extend `NativeWeatherO
 (the generated base class) — matching how the parent library's modules extend their generated
 specs.
 
+## Parent library gotchas
+
+These were discovered while debugging the parent library's reanimated overlay example.
+They apply to this extension if it uses `useMapOverlay` / `toScreenPosition` for spatial
+overlays (weather icons, cursor readout, wind barbs as markers).
+
+### responseInclude must include all needed fields
+
+The parent's `useMapPosition()` returns `responseInclude: { center: 2, zoomLevel: 2, viewportWidth: 2, viewportHeight: 2 }`.
+Always spread this into `<MapContainer responseInclude={...} />`. Without it:
+- `centerSv` stays null → overlays render with `opacity: 0`
+- `zoomSv` stays 0 → `toScreenPosition` returns null (zoom guard)
+
+### mapUpdateInterval for smooth tracking
+
+The native `MapFragment` throttles position events at `mapUpdateInterval` ms (default 40).
+For reanimated overlays to track the map smoothly during pan/zoom, pass
+`mapUpdateInterval={16}` to `<MapContainer>`. Even then, bridge serialization overhead
+limits effective rate to ~30-50fps. True 60fps requires bypassing the bridge entirely
+(see `reanimated_native_shared_value_bridge.md` in parent's memory).
+
+### Fractional zoom — use getZoom(), not getZoomLevel()
+
+vtm's `MapPosition.getZoomLevel()` returns `int` — truncated during pinch-zoom.
+The parent library's `MapFragment` was fixed to use `getZoom()` (returns `double`)
+so reanimated overlays track smoothly through fractional zoom levels (e.g. 2.7).
+This is a native-side fix — no JS changes needed, and this extension inherits it
+automatically since it uses the parent's `useMapPosition`.
+
 ## Key constraints
 
 - **No real iOS implementation.** The `ios/` stub exists because codegen requires it, but
   there is no iOS rendering backend. All native code is under `android/`.
 - **JSON data format only for Phase 1.** On-device GRIB parsing (JGribX + jj2000) is Phase 5.
-- **The parent library must be on the same feature branch** (`feature/reanimated-overlay-projection`)
-  for the `MapHandleContext`/`useLayerOrder`/`useNativeLayerLifecycle` exports to be available.
+- **The parent library must be on a branch that has the extension-point exports**
+  (`MapHandleContext`, `useLayerOrder`, `useNativeLayerLifecycle`) and the fractional-zoom
+  fix (`getZoom()` instead of `getZoomLevel()` in `MapFragment.java`).
 - `react-native-reanimated` and `react-native-worklets` are optional peer dependencies
   (used only by `src/reanimated/useWeatherAnimation.ts`).
 
