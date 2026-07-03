@@ -97,12 +97,10 @@ already in vtm's OpenGL pipeline, so changing opacity costs a single uniform wri
 - `src/reanimated/useWeatherAnimation.ts` already exists — hook into it
 
 **Parent library requirements (discovered during overlay debugging):**
-- `<MapContainer mapUpdateInterval={16} />` — reduces the native event throttle from 40ms
-  (~25fps) to 16ms (~60fps) for the legacy `onMapUpdate` channel
-- `<MapContainer onMapPosition={pos.handleMapPosition} />` — **new fast channel**
-  (2026-07-04) fires every vtm frame unthrottled with a lightweight 8-double payload.
-  Use this instead of `onMapUpdate` for 60fps overlay tracking. Inherited automatically
-  by this extension when using the parent's `useMapPosition()`.
+- `<MapContainer onMapUpdate={pos.handleMapUpdate} />` — fires every vtm frame at
+  60fps with all position fields always present. No throttle, no `responseInclude`
+  gating, no `mapUpdateInterval` prop. Inherited automatically by this extension
+  when using the parent's `useMapPosition()`.
 - The parent library's `MapFragment.java` must use `getZoom()` (fractional double)
   instead of `getZoomLevel()` (truncated int) — fixed in parent as of 2026-07-04
 
