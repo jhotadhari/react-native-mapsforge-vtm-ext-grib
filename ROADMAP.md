@@ -32,30 +32,6 @@ Weather GRIB overlay extension for `react-native-mapsforge-vtm`. Renders gridded
   BitmapTileLayer             ← vtm's standard bitmap tile layer
 ```
 
-### Key Design Decisions
-
-1. **Tile-based rendering (Phase 1).** The `ITileDataSource` interface is the integration
-   point: `query(MapTile tile, ITileDataSink sink)`. Convert `tile.tileX/Y/zoomLevel` to
-   lat/lon bounds, sample the weather grid, render a `Bitmap` at tile resolution, call
-   `sink.setTileImage(bitmap)`. This is the exact pattern used by `HillshadingTileSource`
-   for DEM data — proven and working.
-
-2. **Server-side GRIB→JSON for MVP.** On-device GRIB parsing (JGribX + jj2000) comes in
-   Phase 5. The mobile app receives pre-parsed JSON grids, zero parsing overhead, small
-   APK. The rendering layers don't change when we add on-device parsing later — same grid
-   format, different source.
-
-3. **The JS API never changes across phases.** `<WeatherOverlay parameter="WIND"
-   timeIndex={3} />` works identically whether backed by tiles (Phase 1), a custom vtm
-   Layer (Phase 3), server-parsed JSON, or on-device GRIB. The TurboModule spec is the
-   stable contract.
-
-4. **Extension point pattern.** The main library now exports three hooks that any
-   layer-type extension needs: `MapHandleContext` (provides `nativeNodeHandle` +
-   `LayerOrderRegistry`), `useLayerOrder` (registers position in render tree), and
-   `useNativeLayerLifecycle` (manages `null → false → uuid` state machine). Extensions
-   only provide `create`/`remove` callbacks.
-
 ### Threading Model
 
 All layer mutations flow through the main library's `MapMutationQueue.flush()` on the UI
