@@ -98,12 +98,13 @@ already in vtm's OpenGL pipeline, so changing opacity costs a single uniform wri
 
 **Parent library requirements (discovered during overlay debugging):**
 - `<MapContainer mapUpdateInterval={16} />` — reduces the native event throttle from 40ms
-  (~25fps) to 16ms (~60fps) so spatial overlays track smoothly during pan/zoom
-- `<MapContainer responseInclude={pos.responseInclude} />` — must spread the full
-  `useMapPosition().responseInclude` (includes `center: 2`, `zoomLevel: 2`,
-  `viewportWidth: 2`, `viewportHeight: 2`), not just viewport dimensions
+  (~25fps) to 16ms (~60fps) for the legacy `onMapUpdate` channel
+- `<MapContainer onMapPosition={pos.handleMapPosition} />` — **new fast channel**
+  (2026-07-04) fires every vtm frame unthrottled with a lightweight 8-double payload.
+  Use this instead of `onMapUpdate` for 60fps overlay tracking. Inherited automatically
+  by this extension when using the parent's `useMapPosition()`.
 - The parent library's `MapFragment.java` must use `getZoom()` (fractional double)
-  instead of `getZoomLevel()` (truncated int) — fixed in parent as of 2026-07-03
+  instead of `getZoomLevel()` (truncated int) — fixed in parent as of 2026-07-04
 
 ### Phase 3 — Custom vtm Layer (GPU Interpolation + Particles)
 

@@ -128,20 +128,40 @@ These were discovered while debugging the parent library's reanimated overlay ex
 They apply to this extension if it uses `useMapOverlay` / `toScreenPosition` for spatial
 overlays (weather icons, cursor readout, wind barbs as markers).
 
-### responseInclude must include all needed fields
+### responseInclude for the legacy channel
 
-The parent's `useMapPosition()` returns `responseInclude: { center: 2, zoomLevel: 2, viewportWidth: 2, viewportHeight: 2 }`.
-Always spread this into `<MapContainer responseInclude={...} />`. Without it:
-- `centerSv` stays null → overlays render with `opacity: 0`
-- `zoomSv` stays 0 → `toScreenPosition` returns null (zoom guard)
+The parent's `useMapPosition()` returns `responseInclude: { center: 2, zoomLevel: 2, bearing: 2, tilt: 2, viewportWidth: 2, viewportHeight: 2 }`.
+Spread this into `<MapContainer responseInclude={...} />` if you also wire the legacy
+`onMapUpdate` channel. The fast channel (`onMapPosition`) sends all fields unconditionally
+and doesn't need `responseInclude`.
 
-### mapUpdateInterval for smooth tracking
+### Fast channel (onMapPosition) for 60fps overlay tracking
 
-The native `MapFragment` throttles position events at `mapUpdateInterval` ms (default 40).
-For reanimated overlays to track the map smoothly during pan/zoom, pass
-`mapUpdateInterval={16}` to `<MapContainer>`. Even then, bridge serialization overhead
-limits effective rate to ~30-50fps. True 60fps requires bypassing the bridge entirely
-(see `reanimated_native_shared_value_bridge.md` in parent's memory).
+The parent library provides a dual-channel position-event system:
+
+| Channel | Event | Rate | Payload | Use case |
+|---|---|---|---|---|
+| **Fast** | `onMapPosition` | Every vtm frame (~60fps) | 8 flat doubles (lng, lat, zoom, zoomLevel, bearing, tilt, vpW, vpH) | Overlay positioning via `useMapPosition().handleMapPosition` |
+| **Legacy** | `onMapUpdate` | Throttled at `mapUpdateInterval` | Full `MapEventResponse` with elevation | Debug displays, logging, non-reanimated consumers |
+
+The fast channel fires unconditionally on every vtm frame — no rate limiter, no
+`responseInclude` gating, no elevation disk I/O. The JS handler writes directly to
+reanimated shared values, achieving true 60fps overlay tracking.
+
+Usage:
+```tsx
+const pos = useMapPosition();
+<MapContainer onMapPosition={pos.handleMapPosition} mapUpdateInterval={16}>
+```
+
+This extension inherits the fast channel automatically when using the parent's
+`useMapPosition()` — no code changes needed in ext-grib to benefit from 60fps tracking.
+
+### mapUpdateInterval still matters
+
+The legacy `onMapUpdate` channel is still throttled at `mapUpdateInterval` (default 40ms).
+Pass `mapUpdateInterval={16}` to keep the legacy channel responsive for debug displays
+and non-reanimated consumers. The fast channel ignores this setting entirely.
 
 ### Fractional zoom — use getZoom(), not getZoomLevel()
 
