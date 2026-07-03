@@ -8,3 +8,4 @@ example/android/app/build/
 example/android/.gradle/
 *.log
 .DS_Store
+.yalc/

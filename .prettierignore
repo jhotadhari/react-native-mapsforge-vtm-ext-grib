@@ -1,0 +1,19 @@
+# ignore all.
+*/**/*
+/*
+
+# include root ts js files.
+!/*.js
+!/*.ts
+
+# include dir src.
+!/src
+!src/**/*
+
+# include dir example.
+!/example/
+example/*
+!/example/src/
+!example/src/**/*
+!/example/data/
+!example/data/**/*
