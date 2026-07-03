@@ -96,6 +96,15 @@ already in vtm's OpenGL pipeline, so changing opacity costs a single uniform wri
 - Update `WeatherOverlay.java` to support dual-layer creation
 - `src/reanimated/useWeatherAnimation.ts` already exists — hook into it
 
+**Parent library requirements (discovered during overlay debugging):**
+- `<MapContainer mapUpdateInterval={16} />` — reduces the native event throttle from 40ms
+  (~25fps) to 16ms (~60fps) so spatial overlays track smoothly during pan/zoom
+- `<MapContainer responseInclude={pos.responseInclude} />` — must spread the full
+  `useMapPosition().responseInclude` (includes `center: 2`, `zoomLevel: 2`,
+  `viewportWidth: 2`, `viewportHeight: 2`), not just viewport dimensions
+- The parent library's `MapFragment.java` must use `getZoom()` (fractional double)
+  instead of `getZoomLevel()` (truncated int) — fixed in parent as of 2026-07-03
+
 ### Phase 3 — Custom vtm Layer (GPU Interpolation + Particles)
 
 **Goal:** Replace tile-based backend with a custom vtm `Layer` subclass for GPU-level
