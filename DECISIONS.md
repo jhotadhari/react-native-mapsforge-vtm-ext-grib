@@ -89,9 +89,47 @@ source. The rendering layers don't care where the data came from.
 
 **Relevant context:**
 - NOAA GFS (the most common free GRIB source) uses JPEG2000-compressed GRIB2
-- `edu.ucar:jj2000` is the only pure-Java JPEG2000 decoder suitable for Android (~800KB)
-- netCDF-Java requires minSdkVersion 26 — cuts off ~10-15% of Android devices
-- ecCodes Java bindings are not feasible on Android (native .so cross-compilation per ABI, 20-50MB per ABI)
+- GRIB2 also uses PNG packing and complex packing — a parser that only handles simple packing
+  will fail on many real-world files
+
+### Which Java GRIB parsing library?
+
+If we go with on-device parsing (Option B or C above), which library should we use?
+
+| Library | GRIB1 | GRIB2 | JPEG2000 | Pure Java | Android | APK impact |
+|---|---|---|---|---|---|---|
+| **JGribX** | Yes | Partial | Unknown | Yes | ✅ | ~500 KB |
+| **netCDF-Java (cdm-core)** | Yes | Full | Yes (via jj2000) | Yes | ⚠️ SDK 26+ | 10+ MB deps |
+| **ecCodes Java bindings** | Full | Full | Yes | No (JNI) | ❌ Cross-compile per ABI | 20–50 MB per ABI |
+| **DTN grib-library** | Yes | Yes | Unknown | Yes | ✅ (no release) | Small |
+| **Custom minimal parser** | Targeted | Targeted | Via jj2000 | Yes | ✅ | ~100 KB |
+
+**JGribX** is the best lightweight candidate:
+- Pure Java, MIT license, JDK 8+, Gradle build
+- Minimal dependencies — no Guava, no protobuf, no JNI
+- Actively maintained
+- **Unknown:** whether it handles JPEG2000-compressed GRIB2 (the format NOAA GFS uses).
+  If not, integrating `edu.ucar:jj2000` into a fork is feasible (~800KB).
+
+**netCDF-Java** is the most complete but heaviest:
+- Full GRIB1/2 template support, battle-tested
+- `minSdkVersion 26` cuts off ~10–15% of Android devices (no `java.lang.invoke.MethodHandles`
+  on older API levels)
+- Large transitive dependency tree (Guava, Joda-Time, protobuf-java, ehcache) — Dex method
+  count issues, potential `Duplicate class` conflicts
+
+**ecCodes Java:** Not viable for Android. Requires cross-compiling the C library
+`libeccodes.so` for each ABI via NDK, tens of megabytes per architecture. No known
+production Android app uses it.
+
+**Custom minimal parser:** Feasible if we only target a specific data source (e.g. NOAA GFS
+with known templates). GRIB1 and simple-packed GRIB2 are straightforward binary formats.
+JPEG2000-compressed sections still need `edu.ucar:jj2000`.
+
+**Recommendation:** Start with a server-side conversion (Option A) to ship quickly.
+Validate JGribX against your actual data source when adding offline support. If JGribX
+can't handle your GRIB files, either fork it with jj2000 integration or build a minimal
+parser for the specific templates you need.
 
 ---
 
