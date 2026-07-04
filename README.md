@@ -69,6 +69,27 @@ yarn add react-native-mapsforge-vtm-ext-grib
 
 This library has a **peer dependency** on `react-native-mapsforge-vtm` and `react-native-reanimated`.
 
+## Example app
+
+```sh
+# Clone and install:
+git clone https://github.com/jhotadhari/react-native-mapsforge-vtm-ext-grib
+cd react-native-mapsforge-vtm-ext-grib
+yarn install
+
+# Development (with yalc-linked react-native-mapsforge-vtm):
+cd example && yalc link react-native-mapsforge-vtm && cd ..
+yarn example android
+
+# Serve sample weather data for the example:
+cd example/data && python3 -m http.server 8000
+```
+
+## Documentation
+
+- [Extending react-native-mapsforge-vtm](https://github.com/jhotadhari/react-native-mapsforge-vtm/blob/main/docs/advanced/extending.md) — extension architecture guide
+- [ext-plan skill](https://github.com/jhotadhari/react-native-mapsforge-vtm/blob/main/.claude/skills/ext-plan.md) — interactive scaffolding command
+
 ## Architecture
 
 `WeatherOverlay` creates a custom vtm `TileSource` (`WeatherTileSource`) that renders weather grid data into bitmap tiles on demand. The tile source is backed by a `BitmapTileLayer` — the same layer type used for OSM raster tiles and hillshading in the parent library.
