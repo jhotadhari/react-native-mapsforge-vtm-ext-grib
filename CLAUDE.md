@@ -149,6 +149,13 @@ const pos = useMapPosition();
 This extension inherits 60fps tracking automatically when using the parent's
 `useMapPosition()` — no code changes or configuration needed.
 
+### Bearing and tilt are fully supported
+
+The parent library's `toScreenPosition` and `fromScreenPosition` in `mercatorUtils.ts`
+account for bearing (map rotation) and tilt (perspective) via rotation-matrix +
+orthographic-foreshortening worklet math. Overlays track correctly on rotated and
+tilted maps — no limitations, no configuration needed.
+
 ### Fractional zoom — use getZoom(), not getZoomLevel()
 
 vtm's `MapPosition.getZoomLevel()` returns `int` — truncated during pinch-zoom.

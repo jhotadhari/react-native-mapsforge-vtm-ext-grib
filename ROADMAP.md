@@ -183,7 +183,10 @@ phase only adds an alternative data source.
 
 - **Performance:** grid LOD at low zoom, adaptive particle count by zoom + device tier
 - **Reanimated bearing/tilt:** extend `mercatorUtils.ts` in the main library to handle
-  rotated/projected maps — benefits both libraries
+  rotated/projected maps — benefits both libraries. **Done 2026-07-04 in parent library
+  `feature/reanimated-overlay-projection` branch.** `toScreenPosition` and `fromScreenPosition`
+  now accept `bearingSv` and `tiltSv` shared values and apply rotation + orthographic tilt
+  foreshortening in worklets. Overlays track correctly on rotated and tilted maps.
 - **File management:** download, cache, auto-delete old forecasts
 - **Documentation:** full README with examples, publish to npm
 
