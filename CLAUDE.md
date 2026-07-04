@@ -128,20 +128,28 @@ These were discovered while debugging the parent library's reanimated overlay ex
 They apply to this extension if it uses `useMapOverlay` / `toScreenPosition` for spatial
 overlays (weather icons, cursor readout, wind barbs as markers).
 
-### responseInclude must include all needed fields
+### 60fps position events — no throttle, no configuration
 
-The parent's `useMapPosition()` returns `responseInclude: { center: 2, zoomLevel: 2, viewportWidth: 2, viewportHeight: 2 }`.
-Always spread this into `<MapContainer responseInclude={...} />`. Without it:
-- `centerSv` stays null → overlays render with `opacity: 0`
-- `zoomSv` stays 0 → `toScreenPosition` returns null (zoom guard)
+The parent library's `onMapUpdate` fires every vtm frame at 60fps with all
+position fields always present. There is no rate limiter, no `responseInclude`
+gating, and no `mapUpdateInterval` prop — position updates are always at full
+frame rate.
 
-### mapUpdateInterval for smooth tracking
+Usage:
+```tsx
+const pos = useMapPosition();
+<MapContainer onMapUpdate={pos.handleMapUpdate}>
+```
 
-The native `MapFragment` throttles position events at `mapUpdateInterval` ms (default 40).
-For reanimated overlays to track the map smoothly during pan/zoom, pass
-`mapUpdateInterval={16}` to `<MapContainer>`. Even then, bridge serialization overhead
-limits effective rate to ~30-50fps. True 60fps requires bypassing the bridge entirely
-(see `reanimated_native_shared_value_bridge.md` in parent's memory).
+This extension inherits 60fps tracking automatically when using the parent's
+`useMapPosition()` — no code changes or configuration needed.
+
+### Bearing and tilt are fully supported
+
+The parent library's `toScreenPosition` and `fromScreenPosition` in `mercatorUtils.ts`
+account for bearing (map rotation) and tilt (perspective) via rotation-matrix +
+orthographic-foreshortening worklet math. Overlays track correctly on rotated and
+tilted maps — no limitations, no configuration needed.
 
 ### Fractional zoom — use getZoom(), not getZoomLevel()
 
