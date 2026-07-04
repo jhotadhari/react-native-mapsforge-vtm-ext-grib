@@ -3,9 +3,11 @@
     "rootDir": ".",
     "paths": {
       "react-native-mapsforge-vtm-ext-grib": ["./src/index"],
-      "react-native-mapsforge-vtm": ["../react-native-mapsforge-vtm/src/index.tsx"],
+      "react-native-mapsforge-vtm": [
+        "../react-native-mapsforge-vtm/lib/typescript/src/index.d.ts"
+      ],
       "react-native-mapsforge-vtm/reanimated": [
-        "../react-native-mapsforge-vtm/src/reanimated/index.ts"
+        "../react-native-mapsforge-vtm/lib/typescript/src/reanimated/index.d.ts"
       ]
     },
     "allowUnreachableCode": false,
@@ -14,8 +16,8 @@
     "forceConsistentCasingInFileNames": true,
     "jsx": "react-jsx",
     "lib": ["ESNext"],
-    "module": "Node16",
-    "moduleResolution": "Node16",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
