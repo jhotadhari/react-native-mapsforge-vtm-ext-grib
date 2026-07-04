@@ -138,25 +138,9 @@ const WeatherOverlay = ({
 		onError,
 	]);
 
-	// Update timeIndex in place.
-	useEffect(() => {
-		if (nativeNodeHandle && uuid && timeIndex != null) {
-			WeatherOverlayModule.setTimeIndex({
-				nativeNodeHandle,
-				uuid,
-				timeIndex: Math.round(timeIndex),
-			}).catch((err: ErrorBase) => {
-				reportNativeError(err, onError);
-			});
-		}
-	}, [
-		timeIndex,
-		nativeNodeHandle,
-		uuid,
-		onError,
-	]);
-
 	// Recreate on these prop changes (baked into native construction).
+	// timeIndex is included here because changing it requires a fresh data
+	// fetch and tile source — same as dataUrl or parameter changes.
 	useEffect(() => {
 		triggerRemove({ triggerOnRemove: false }).then((success) => {
 			if (success) {
@@ -169,6 +153,7 @@ const WeatherOverlay = ({
 	}, [
 		dataUrl,
 		parameter,
+		timeIndex,
 		colorMap,
 		zoomMin,
 		zoomMax,

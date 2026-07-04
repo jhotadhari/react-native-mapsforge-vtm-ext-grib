@@ -37,6 +37,7 @@ public class WeatherTileDataSource implements ITileDataSource {
             return;
         }
 
+        Bitmap bitmap = null;
         try {
             WeatherGridData grid = tileSource.getGridData();
             if (grid == null || grid.values == null || grid.values.length == 0) {
@@ -59,7 +60,7 @@ public class WeatherTileDataSource implements ITileDataSource {
             }
 
             int tileSize = 256;
-            Bitmap bitmap = Bitmap.createBitmap(
+            bitmap = Bitmap.createBitmap(
                 tileSize, tileSize, Bitmap.Config.ARGB_8888);
             int[] pixels = new int[tileSize * tileSize];
 
@@ -96,6 +97,10 @@ public class WeatherTileDataSource implements ITileDataSource {
 
         } catch (Exception e) {
             e.printStackTrace();
+            // Recycle the bitmap if it was created before the exception.
+            if (bitmap != null && !bitmap.isRecycled()) {
+                bitmap.recycle();
+            }
             dataSink.completed(QueryResult.FAILED);
         }
     }

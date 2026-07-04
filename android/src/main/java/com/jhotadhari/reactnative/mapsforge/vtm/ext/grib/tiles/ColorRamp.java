@@ -49,8 +49,13 @@ public class ColorRamp {
         int r = (int) (Color.red(c0) + (Color.red(c1) - Color.red(c0)) * t);
         int g = (int) (Color.green(c0) + (Color.green(c1) - Color.green(c0)) * t);
         int b = (int) (Color.blue(c0) + (Color.blue(c1) - Color.blue(c0)) * t);
+        int a = (int) (Color.alpha(c0) + (Color.alpha(c1) - Color.alpha(c0)) * t);
 
-        return Color.argb(180, r, g, b); // Semi-transparent so the map shows through.
+        // Per-stop alpha is interpolated along with RGB. The layer-level
+        // opacity (set via setOpacity / BitmapTileLayer.setBitmapAlpha)
+        // provides the second multiplier, so users can achieve any effective
+        // opacity by tuning per-stop alpha and layer opacity independently.
+        return Color.argb(a, r, g, b);
     }
 
     /**

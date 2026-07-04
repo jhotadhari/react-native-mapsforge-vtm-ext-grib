@@ -39,8 +39,8 @@ export default function App() {
 					timeIndex={0}
 					colorMap="wind"
 					opacity={0.7}
-					onError={({ nativeEvent }) => {
-						console.warn('WeatherOverlay error:', nativeEvent);
+					onError={(err) => {
+						console.warn('WeatherOverlay error:', err?.userInfo?.errorMsg ?? err);
 					}}
 				/>
 			</MapContainer>

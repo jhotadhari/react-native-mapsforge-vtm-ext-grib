@@ -17,9 +17,9 @@ import org.oscim.tiling.TileSource;
  */
 public class WeatherTileSource extends TileSource {
 
-    private final WeatherGridData gridData;
+    private WeatherGridData gridData;
     private final String parameter;
-    private final int timeIndex;
+    private int timeIndex;
     private final String colorMap;
 
     /**
@@ -69,4 +69,15 @@ public class WeatherTileSource extends TileSource {
     String getParameter() { return parameter; }
     int getTimeIndex() { return timeIndex; }
     String getColorMap() { return colorMap; }
+
+    /**
+     * Updates the grid data in place (e.g. when switching forecast time steps).
+     * The next tile query will render with the new data.
+     */
+    void setGridData(WeatherGridData gridData) { this.gridData = gridData; }
+
+    /**
+     * Updates the time index in place.
+     */
+    void setTimeIndex(int timeIndex) { this.timeIndex = timeIndex; }
 }

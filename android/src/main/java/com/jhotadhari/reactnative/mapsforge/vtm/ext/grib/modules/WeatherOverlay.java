@@ -22,7 +22,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 // These are public classes in the parent library react-native-mapsforge-vtm
@@ -35,8 +35,18 @@ public class WeatherOverlay extends NativeWeatherOverlaySpec {
     private final LayerHelper layerHelper;
     private final LayerZoomBoundsHelper zoomBoundsHelper;
 
-    // In-memory cache of parsed grid data, keyed by dataUrl + "|" + parameter.
-    private final Map<String, WeatherGridData> gridCache = new HashMap<>();
+    // In-memory cache of parsed grid data, keyed by dataUrl + "|" + parameter + "|" + timeIndex.
+    // LRU eviction with a reasonable cap — each grid is ~128 KB+, and unbounded
+    // retention across URL/parameter/timestep combinations would cause OOM.
+    private static final int MAX_GRID_CACHE_SIZE = 32;
+    private final Map<String, WeatherGridData> gridCache = new LinkedHashMap<String, WeatherGridData>(
+            16, 0.75f, true  // access-order for LRU
+    ) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, WeatherGridData> eldest) {
+            return size() > MAX_GRID_CACHE_SIZE;
+        }
+    };
 
     public WeatherOverlay(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -99,7 +109,9 @@ public class WeatherOverlay extends NativeWeatherOverlaySpec {
                 ? params.getInt("zoomMax") : (int) defaults.get("zoomMax");
 
             // Load grid data (cached in memory after first load).
-            String cacheKey = dataUrl + "|" + parameter;
+            // Include timeIndex in the key so different timesteps of the
+            // same URL+parameter are cached independently.
+            String cacheKey = dataUrl + "|" + parameter + "|" + timeIndex;
             WeatherGridData gridData = gridCache.get(cacheKey);
             if (gridData == null) {
                 gridData = fetchAndParseGridData(dataUrl, parameter, timeIndex);
@@ -196,17 +208,26 @@ public class WeatherOverlay extends NativeWeatherOverlaySpec {
                 ? params.getDouble("opacity")
                 : (double) getTypedExportedConstants().get("opacity");
 
-            BitmapTileLayer layer = (BitmapTileLayer) layerHelper
-                .getLayers(params.getInt("nativeNodeHandle"))
-                .get(params.getString("uuid"));
+            // Route through the UI thread — BitmapTileLayer.setBitmapAlpha
+            // triggers a map redraw and must not be called from the bridge
+            // thread (consistent with the core library's threading model).
+            com.facebook.react.bridge.UiThreadUtil.runOnUiThread(() -> {
+                try {
+                    BitmapTileLayer layer = (BitmapTileLayer) layerHelper
+                        .getLayers(params.getInt("nativeNodeHandle"))
+                        .get(params.getString("uuid"));
 
-            if (null == layer) {
-                Utils.promiseReject(promise, "Unable to find layer");
-                return;
-            }
+                    if (null == layer) {
+                        Utils.promiseReject(promise, "Unable to find layer");
+                        return;
+                    }
 
-            layer.setBitmapAlpha((float) opacity, true);
-            promise.resolve(params.getString("uuid"));
+                    layer.setBitmapAlpha((float) opacity, true);
+                    promise.resolve(params.getString("uuid"));
+                } catch (Exception e) {
+                    Utils.promiseReject(promise, e.getMessage());
+                }
+            });
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -223,10 +244,12 @@ public class WeatherOverlay extends NativeWeatherOverlaySpec {
                 return;
             }
 
-            // In Phase 1, changing the time index requires recreating the tile
-            // source. The JS side handles this via the remove+create pattern in
-            // the WeatherOverlay component's useEffect for timeIndex changes.
-            // Phase 2+ will add in-place interpolation support.
+            // Time index changes are handled by the JS side via the
+            // remove+create pattern in WeatherOverlay's recreate useEffect
+            // (timeIndex is in its dependency array). The recreate path
+            // fetches fresh data with the correct cache key and creates a
+            // new WeatherTileSource. This method exists for API symmetry
+            // and future in-place interpolation support.
             promise.resolve(params.getString("uuid"));
 
         } catch (Exception e) {
