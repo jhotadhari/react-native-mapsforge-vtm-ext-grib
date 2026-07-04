@@ -4,10 +4,10 @@ import androidx.annotation.NonNull;
 
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
-import com.facebook.react.module.annotations.ReactModule;
+
+import com.jhotadhari.reactnative.mapsforge.vtm.ext.grib.NativeWeatherOverlaySpec;
 
 import org.oscim.android.MapView;
 import org.oscim.layers.tile.bitmap.BitmapTileLayer;
@@ -30,10 +30,7 @@ import com.jhotadhari.reactnative.mapsforge.vtm.Utils;
 import com.jhotadhari.reactnative.mapsforge.vtm.LayerHelper;
 import com.jhotadhari.reactnative.mapsforge.vtm.LayerZoomBoundsHelper;
 
-@ReactModule(name = WeatherOverlay.NAME)
-public class WeatherOverlay extends ReactContextBaseJavaModule {
-
-    public static final String NAME = "WeatherOverlay";
+public class WeatherOverlay extends NativeWeatherOverlaySpec {
 
     private final LayerHelper layerHelper;
     private final LayerZoomBoundsHelper zoomBoundsHelper;
@@ -49,13 +46,7 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
 
     @NonNull
     @Override
-    public String getName() {
-        return NAME;
-    }
-
-    @NonNull
-    @Override
-    public Map<String, Object> getConstants() {
+    public Map<String, Object> getTypedExportedConstants() {
         final Map<String, Object> constants = new HashMap<>();
         constants.put("dataUrl", "");
         constants.put("parameter", "WIND");
@@ -91,7 +82,7 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
             }
 
             // Get params, assign defaults.
-            Map<String, Object> defaults = getConstants();
+            Map<String, Object> defaults = getTypedExportedConstants();
             String dataUrl = Utils.rMapHasKey(params, "dataUrl")
                 ? params.getString("dataUrl") : (String) defaults.get("dataUrl");
             String parameter = Utils.rMapHasKey(params, "parameter")
@@ -203,7 +194,7 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
 
             double opacity = Utils.rMapHasKey(params, "opacity")
                 ? params.getDouble("opacity")
-                : (double) getConstants().get("opacity");
+                : (double) getTypedExportedConstants().get("opacity");
 
             BitmapTileLayer layer = (BitmapTileLayer) layerHelper
                 .getLayers(params.getInt("nativeNodeHandle"))
