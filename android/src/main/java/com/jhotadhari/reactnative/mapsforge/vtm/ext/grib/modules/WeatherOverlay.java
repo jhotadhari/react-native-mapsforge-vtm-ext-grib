@@ -22,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -76,6 +77,7 @@ public class WeatherOverlay extends NativeWeatherOverlaySpec {
 
     @ReactMethod
     public void createLayer(ReadableMap params, Promise promise) {
+        android.util.Log.d("WeatherOverlay", "createLayer called with params: " + params.toString());
         try {
             if (!Utils.rMapHasKey(params, "nativeNodeHandle")) {
                 Utils.promiseReject(promise, "Undefined nativeNodeHandle");

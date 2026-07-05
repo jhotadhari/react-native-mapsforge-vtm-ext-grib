@@ -38,10 +38,7 @@ public class WeatherTileSource extends TileSource {
         int timeIndex,
         String colorMap
     ) {
-        super(new Builder<>()
-            .zoomMin(zoomMin)
-            .zoomMax(zoomMax)
-            .tileSize(256));
+        super(zoomMin, zoomMax, 256);
         this.gridData = gridData;
         this.parameter = parameter;
         this.timeIndex = timeIndex;

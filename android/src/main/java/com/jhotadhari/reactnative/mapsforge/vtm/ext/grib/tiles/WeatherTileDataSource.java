@@ -3,6 +3,7 @@ package com.jhotadhari.reactnative.mapsforge.vtm.ext.grib.tiles;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 
+import org.oscim.android.canvas.AndroidBitmap;
 import org.oscim.core.BoundingBox;
 import org.oscim.layers.tile.MapTile;
 import org.oscim.tiling.ITileDataSink;
@@ -52,32 +53,39 @@ public class WeatherTileDataSource implements ITileDataSource {
             BoundingBox bbox = tileToBoundingBox(
                 mapTile.tileX, mapTile.tileY, mapTile.zoomLevel);
 
-            // Check if this tile overlaps with the weather grid at all.
-            if (bbox.maxLatitude < grid.minLat || bbox.minLatitude > grid.maxLat
-                || bbox.maxLongitude < grid.minLng || bbox.minLongitude > grid.maxLng) {
+            // Only skip tiles that are completely outside the grid.
+            // Use a small epsilon so borderline tiles don't get excluded
+            // by floating-point rounding at tile edges.
+            final double eps = 0.0001;
+            if (bbox.getMaxLatitude() + eps < grid.minLat
+                || bbox.getMinLatitude() - eps > grid.maxLat
+                || bbox.getMaxLongitude() + eps < grid.minLng
+                || bbox.getMinLongitude() - eps > grid.maxLng) {
                 dataSink.completed(QueryResult.TILE_NOT_FOUND);
                 return;
             }
 
-            int tileSize = 256;
+            int tileSize = tileSource.getTileSize();
             bitmap = Bitmap.createBitmap(
                 tileSize, tileSize, Bitmap.Config.ARGB_8888);
             int[] pixels = new int[tileSize * tileSize];
 
-            double dLng = bbox.maxLongitude - bbox.minLongitude;
-            double dLat = bbox.maxLatitude - bbox.minLatitude;
+            double dLng = bbox.getMaxLongitude() - bbox.getMinLongitude();
+            double dLat = bbox.getMaxLatitude() - bbox.getMinLatitude();
 
             // Build the color ramp for this parameter.
             ColorRamp ramp = ColorRamp.forName(colorMapName);
 
             for (int py = 0; py < tileSize; py++) {
-                // Latitude: top row = maxLat, bottom row = minLat.
-                double lat = bbox.maxLatitude
-                    - (py / (double) (tileSize - 1)) * dLat;
+                // Sample the center of each pixel cell, not the tile edges.
+                // Row 0 = top of tile (maxLat); row (tileSize-1) = bottom.
+                double lat = bbox.getMaxLatitude()
+                    - ((py + 0.5) / (double) tileSize) * dLat;
 
                 for (int px = 0; px < tileSize; px++) {
-                    double lng = bbox.minLongitude
-                        + (px / (double) (tileSize - 1)) * dLng;
+                    // Column 0 = left (minLng); column (tileSize-1) = right.
+                    double lng = bbox.getMinLongitude()
+                        + ((px + 0.5) / (double) tileSize) * dLng;
 
                     float value = grid.getValueAt(lat, lng);
                     int color;
@@ -92,7 +100,7 @@ public class WeatherTileDataSource implements ITileDataSource {
             }
 
             bitmap.setPixels(pixels, 0, tileSize, 0, 0, tileSize, tileSize);
-            dataSink.setTileImage(bitmap);
+            dataSink.setTileImage(new AndroidBitmap(bitmap));
             dataSink.completed(QueryResult.SUCCESS);
 
         } catch (Exception e) {

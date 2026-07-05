@@ -5,7 +5,7 @@
   "source": "./src/index.ts",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
-  "types": "./lib/typescript/src/index.d.ts",
+  "types": "./lib/typescript/commonjs/src/index.d.ts",
   "exports": {
     ".": {
       "import": {
@@ -53,6 +53,7 @@
     "format": "prettier . --write",
     "clean": "del-cli android/build example/android/build example/android/app/build lib",
     "prepare": "bob build",
+"postinstall": "node -e \"['react','react-native','react-native-mapsforge-vtm'].forEach(m=>{const t='node_modules/'+m,s='example/'+t;require('fs').existsSync(s)&&!require('fs').lstatSync(t).isSymbolicLink()&&(require('fs').rmSync(t,{recursive:true,force:true}),require('fs').symlinkSync(require('path').relative(require('path').dirname(t),require('path').resolve(s)),t,'dir'))})\"",
     "release": "release-kit"
   },
   "keywords": [
