@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "packages": {
+    "react-native-mapsforge-vtm": {
+      "signature": "dd044fbb2a849b1afff11ec421d16c69",
+      "file": true,
+      "replaced": "*"
+    }
+  }
+}

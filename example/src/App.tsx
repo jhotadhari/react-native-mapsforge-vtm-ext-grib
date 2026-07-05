@@ -15,7 +15,8 @@ import { WeatherOverlay } from 'react-native-mapsforge-vtm-ext-grib';
  * Then update DATA_URL below to point to your machine's IP (or 10.0.2.2 for
  * the Android emulator host loopback).
  */
-const DATA_URL = 'http://10.0.2.2:8000/sample-wind.json';
+// const DATA_URL = 'http://10.0.2.2:8000/sample-wind.json';	// emulator
+const DATA_URL = 'http://192.168.0.11:8000/sample-wind.json';	// physical device
 
 // Central Germany — the sample wind data covers 48-54°N, 6-14°E
 const defaultCenter: [number, number] = [10, 51];
@@ -32,7 +33,6 @@ export default function App() {
 				zoomLevel={6}
 			>
 				<LayerBitmapTile />
-				<LayerScalebar />
 				<WeatherOverlay
 					dataUrl={DATA_URL}
 					parameter="WIND"
@@ -43,6 +43,7 @@ export default function App() {
 						console.warn('WeatherOverlay error:', err?.userInfo?.errorMsg ?? err);
 					}}
 				/>
+				<LayerScalebar />
 			</MapContainer>
 
 			<View style={styles.overlay}>

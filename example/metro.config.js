@@ -9,21 +9,10 @@ const parentRoot = path.resolve(
 
 /**
  * Metro configuration
- * https://facebook.github.io/metro/docs/configuration
- *
- * @type {import('metro-config').MetroConfig}
  */
 const config = getDefaultConfig(__dirname);
 
 module.exports = {
   ...config,
   watchFolders: [...(config.watchFolders ?? []), root, parentRoot],
-  resolver: {
-    ...config.resolver,
-    extraNodeModules: {
-      ...(config.resolver?.extraNodeModules ?? {}),
-      'react-native-mapsforge-vtm-ext-grib': root,
-      'react-native-mapsforge-vtm': parentRoot,
-    },
-  },
 };

@@ -5301,13 +5301,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"events@npm:^3.3.0":
-  version: 3.3.0
-  resolution: "events@npm:3.3.0"
-  checksum: f6f487ad2198aa41d878fa31452f1a3c00958f46e9019286ff4787c84aac329332ab45c9cdc8c445928fc6d7ded294b9e005a7fce9426488518017831b272780
-  languageName: node
-  linkType: hard
-
 "execa@npm:^5.0.0":
   version: 5.1.1
   resolution: "execa@npm:5.1.1"
@@ -8376,13 +8369,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"queue-promise@npm:^2.2.1":
-  version: 2.2.1
-  resolution: "queue-promise@npm:2.2.1"
-  checksum: 139c1844225580545a94c5a234fcde33e47941f473525bb0df3dacbdd55724993754f048c25c3a8b98961cd84221913b633397383ef8bc92476237d0dca6d721
-  languageName: node
-  linkType: hard
-
 "queue@npm:6.0.2":
   version: 6.0.2
   resolution: "queue@npm:6.0.2"
@@ -8493,7 +8479,7 @@ __metadata:
     react: ^19.2.7
     react-native: ^0.86.0
     react-native-builder-bob: ^0.43.0
-    react-native-mapsforge-vtm: "*"
+    react-native-mapsforge-vtm: "file:.yalc/react-native-mapsforge-vtm"
     react-native-mapsforge-vtm-ext-grib: "workspace:*"
   languageName: unknown
   linkType: soft
@@ -8538,17 +8524,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"react-native-mapsforge-vtm@npm:*":
+"react-native-mapsforge-vtm@file:.yalc/react-native-mapsforge-vtm::locator=react-native-mapsforge-vtm-ext-grib-example%40workspace%3Aexample":
   version: 0.7.0
-  resolution: "react-native-mapsforge-vtm@npm:0.7.0"
+  resolution: "react-native-mapsforge-vtm@file:.yalc/react-native-mapsforge-vtm#.yalc/react-native-mapsforge-vtm::hash=cc43f4&locator=react-native-mapsforge-vtm-ext-grib-example%40workspace%3Aexample"
   dependencies:
-    events: ^3.3.0
     lodash-es: ^4.17.21
-    queue-promise: ^2.2.1
   peerDependencies:
     react: "*"
-    react-native: "*"
-  checksum: 9a9f89efe073409927e73f8c51334274fb8eec6c3b99dd3c4fa00c852546ae9d7ea90d524cb557aa76b3033f3f43deeebabf0bb107bff63ede6958e63b0cef75
+    react-native: ">=0.80.0"
+    react-native-reanimated: ">=3.0.0"
+    react-native-worklets: ">=0.1.0"
+  peerDependenciesMeta:
+    react-native-reanimated:
+      optional: true
+    react-native-worklets:
+      optional: true
+  checksum: 1b7ad82e22f86b24bb2807dba78e89b216502b2e758098f6b1c00e236861f59b7fc8106c4db20d3ba4321e2dea14770ab8915febae6b1baa2c0d327060367739
   languageName: node
   linkType: hard
 
