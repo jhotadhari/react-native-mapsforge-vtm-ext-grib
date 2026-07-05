@@ -87,6 +87,11 @@ dependencies {
   implementation "com.facebook.react:react-android"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
+  // Parent library — provides Utils, LayerHelper, LayerZoomBoundsHelper,
+  // and the extension-point hooks (MapHandleContext, useLayerOrder,
+  // useNativeLayerLifecycle).
+  compileOnly project(':react-native-mapsforge-vtm')
+
   // vtm — same version as the main library
   implementation 'com.github.mapsforge.vtm:vtm:0.28.0'
   implementation 'com.github.mapsforge.vtm:vtm-android:0.28.0'

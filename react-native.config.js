@@ -3,6 +3,7 @@ module.exports = {
 		platforms: {
 			android: {
 				sourceDir: './android',
+				cmakeListsPath: 'CMakeLists.txt',
 				packageImportPath:
 					'import com.jhotadhari.reactnative.mapsforge.vtm.ext.grib.ExtGribPackage;',
 				packageInstance: 'new ExtGribPackage()',
