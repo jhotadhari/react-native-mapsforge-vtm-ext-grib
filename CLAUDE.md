@@ -14,6 +14,17 @@ was built as the first external consumer of the parent library's layer-type exte
 `MapHandleContext`, `useLayerOrder`, and `useNativeLayerLifecycle` — which were exported
 specifically to enable this library.
 
+## Edit Tool - Whitespace Workaround
+
+For `.ts`/`.tsx`/`.js`/`.jsx` files: match `old_string` in Edit calls **without** leading
+whitespace (to avoid the tab-vs-space ambiguity described in
+[claude-code/#26996](https://github.com/anthropics/claude-code/issues/26996)). Accumulate all
+touched files, then run one `npx prettier --write <file1> <file2> ...` at the end to fix
+indentation. Only include leading whitespace when needed to disambiguate non-unique matches.
+
+For `.java` files, `yarn format` doesn't cover them — fall back to `sed` with explicit `\t`
+escapes after a single failed Edit attempt.
+
 ## Common commands
 
 This is a Yarn workspaces package (`packageManager: yarn@3.6.1`). An `example/` workspace will
