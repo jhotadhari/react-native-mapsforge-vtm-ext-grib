@@ -1,0 +1,1 @@
+- [ext-plan-grib-findings](ext-plan-grib-findings.md) — Extension example app setup: yalc, cmake, Metro, tsconfig, duplicate React, check list
