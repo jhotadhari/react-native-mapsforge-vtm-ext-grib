@@ -93,12 +93,12 @@ dependencies {
   compileOnly project(':react-native-mapsforge-vtm')
 
   // vtm — same version as the main library
-  implementation 'com.github.mapsforge.vtm:vtm:0.28.0'
-  implementation 'com.github.mapsforge.vtm:vtm-android:0.28.0'
-  runtimeOnly 'com.github.mapsforge.vtm:vtm-android:0.28.0:natives-armeabi-v7a'
-  runtimeOnly 'com.github.mapsforge.vtm:vtm-android:0.28.0:natives-arm64-v8a'
-  runtimeOnly 'com.github.mapsforge.vtm:vtm-android:0.28.0:natives-x86'
-  runtimeOnly 'com.github.mapsforge.vtm:vtm-android:0.28.0:natives-x86_64'
+  implementation 'com.github.mapsforge.vtm:vtm:0.29.0'
+  implementation 'com.github.mapsforge.vtm:vtm-android:0.29.0'
+  runtimeOnly 'com.github.mapsforge.vtm:vtm-android:0.29.0:natives-armeabi-v7a'
+  runtimeOnly 'com.github.mapsforge.vtm:vtm-android:0.29.0:natives-arm64-v8a'
+  runtimeOnly 'com.github.mapsforge.vtm:vtm-android:0.29.0:natives-x86'
+  runtimeOnly 'com.github.mapsforge.vtm:vtm-android:0.29.0:natives-x86_64'
 }
 
 react {
