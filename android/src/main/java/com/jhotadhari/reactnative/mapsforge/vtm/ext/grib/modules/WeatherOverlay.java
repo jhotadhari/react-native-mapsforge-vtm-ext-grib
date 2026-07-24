@@ -117,15 +117,7 @@ public class WeatherOverlay extends NativeWeatherOverlaySpec {
             WeatherGridData gridData = gridCache.get(cacheKey);
             if (gridData == null) {
                 gridData = fetchAndParseGridData(dataUrl, parameter, timeIndex);
-                if (gridData != null) {
-                    gridCache.put(cacheKey, gridData);
-                }
-            }
-
-            if (gridData == null) {
-                Utils.promiseReject(promise,
-                    "Unable to load weather data from: " + dataUrl);
-                return;
+                gridCache.put(cacheKey, gridData);
             }
 
             // Create the tile source (HillshadingTileSource pattern).
@@ -309,7 +301,9 @@ public class WeatherOverlay extends NativeWeatherOverlaySpec {
 
             JSONArray timeSteps = root.getJSONArray("timeSteps");
             if (timeIndex < 0 || timeIndex >= timeSteps.length()) {
-                return null;
+                throw new IllegalArgumentException(
+                    "timeIndex " + timeIndex + " out of range [0, " + (timeSteps.length() - 1) + "]"
+                );
             }
 
             JSONObject step = timeSteps.getJSONObject(timeIndex);
@@ -337,7 +331,9 @@ public class WeatherOverlay extends NativeWeatherOverlaySpec {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            throw new RuntimeException(
+                "Failed to load weather data from " + dataUrl + ": " + e.toString()
+            );
         } finally {
             if (connection != null) {
                 connection.disconnect();
