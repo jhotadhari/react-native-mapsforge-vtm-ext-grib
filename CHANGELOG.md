@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0] - 2026-09-24
 
 ### Changed
 
@@ -25,3 +25,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Sample data grid dimensions** — `example/data/sample-wind.json` declared `nj: 24` but only
   contained 384 values; corrected to `nj: 12` (32 × 12) so tile queries no longer index out of
   bounds.
+
+[0.2.0]: https://github.com/jhotadhari/react-native-mapsforge-vtm-ext-grib/releases/tag/v0.2.0

@@ -1,6 +1,6 @@
 {
   "name": "react-native-mapsforge-vtm-ext-grib",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Weather GRIB overlay extension for react-native-mapsforge-vtm. Renders gridded weather data (wind, temperature, pressure, etc.) as colored overlays on offline vector maps. Android only.",
   "source": "./src/index.ts",
   "main": "./lib/commonjs/index.js",
