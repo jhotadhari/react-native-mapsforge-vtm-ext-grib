@@ -1,5 +1,6 @@
 node_modules/
 lib/
+.release-kit-state.json
 android/build/
 android/generated/
 example/node_modules/
