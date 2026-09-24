@@ -17,7 +17,8 @@ import reportNativeError from '../reportNativeError';
  */
 import {
 	MapHandleContext,
-	useLayerOrder,
+	useLayerAnchor,
+	useSceneUuidBinding,
 	useNativeLayerLifecycle,
 } from 'react-native-mapsforge-vtm';
 
@@ -38,6 +39,10 @@ const WeatherOverlay = ({
 }: WeatherOverlayProps) => {
 	const { nativeNodeHandle } = useContext(MapHandleContext);
 
+	const { uid: anchorUid, element: anchorElement } = useLayerAnchor({
+		kind: 'layer',
+	});
+
 	const { uuid, triggerCreate, triggerRemove } = useNativeLayerLifecycle({
 		enabled: !!nativeNodeHandle && !!dataUrl,
 		create: ({ triggerOnCreate, triggerOnChange }) => {
@@ -48,7 +53,6 @@ const WeatherOverlay = ({
 			}
 			return WeatherOverlayModule.createLayer({
 				nativeNodeHandle,
-				positionIndex,
 				...(dataUrl && { dataUrl }),
 				...(parameter && { parameter }),
 				...(timeIndex != null && { timeIndex: Math.round(timeIndex) }),
@@ -94,7 +98,7 @@ const WeatherOverlay = ({
 		onError,
 	});
 
-	const { positionIndex } = useLayerOrder(uuid);
+	useSceneUuidBinding(anchorUid, uuid);
 
 	// Update enabledZoomMin/enabledZoomMax in place.
 	useEffect(() => {
@@ -161,7 +165,7 @@ const WeatherOverlay = ({
 		triggerCreate,
 	]);
 
-	return null;
+	return anchorElement;
 };
 
 WeatherOverlay.defaults = WeatherOverlayModule.getConstants();

@@ -8479,7 +8479,7 @@ __metadata:
     react: ^19.2.7
     react-native: ^0.86.0
     react-native-builder-bob: ^0.43.0
-    react-native-mapsforge-vtm: "file:.yalc/react-native-mapsforge-vtm"
+    react-native-mapsforge-vtm: ^0.9.0
     react-native-mapsforge-vtm-ext-grib: "workspace:*"
   languageName: unknown
   linkType: soft
@@ -8513,7 +8513,7 @@ __metadata:
   peerDependencies:
     react: "*"
     react-native: ">=0.80.0"
-    react-native-mapsforge-vtm: "*"
+    react-native-mapsforge-vtm: ^0.9.0
     react-native-reanimated: ">=3.0.0"
     react-native-worklets: ">=0.1.0"
   peerDependenciesMeta:
@@ -8524,9 +8524,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"react-native-mapsforge-vtm@file:.yalc/react-native-mapsforge-vtm::locator=react-native-mapsforge-vtm-ext-grib-example%40workspace%3Aexample":
-  version: 0.7.0
-  resolution: "react-native-mapsforge-vtm@file:.yalc/react-native-mapsforge-vtm#.yalc/react-native-mapsforge-vtm::hash=aa61f8&locator=react-native-mapsforge-vtm-ext-grib-example%40workspace%3Aexample"
+"react-native-mapsforge-vtm@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "react-native-mapsforge-vtm@npm:0.9.0"
   dependencies:
     lodash-es: ^4.17.21
   peerDependencies:
@@ -8539,7 +8539,7 @@ __metadata:
       optional: true
     react-native-worklets:
       optional: true
-  checksum: c6f5ad50aa01a7ac14ad5a3b4c4f4e4b05f39ac136132cb2793e1ff2ba12994ec667943bc500b12800041a198ad1a3ae6d586f0beccd80fd7a80ace9a99ca11a
+  checksum: 000bb174c3c0ef5a7bcee1ab842c2fc7d1183e96eaa0b3646ca88cd39aeda7fb9a2a08202ee58c0c8a96478b869f09600c0a4daa15653e531fae244ac92764c7
   languageName: node
   linkType: hard
 

@@ -352,11 +352,11 @@ What should the JSON weather grid format look like?
 
 ## 8. Extension point pattern in the parent library
 
-The parent library (`react-native-mapsforge-vtm`) now exports three hooks that this
-extension uses:
+The parent library (`react-native-mapsforge-vtm`) exports extension-point hooks that this
+extension uses (originally `useLayerOrder`, migrated in 0.2.0 to the scene model):
 
-- `MapHandleContext` — React context for `nativeNodeHandle` + `LayerOrderRegistry`
-- `useLayerOrder(uuid)` — registers position in render tree
+- `MapHandleContext` — React context for `nativeNodeHandle` + `scene` + `sync`
+- `useLayerAnchor({ kind: 'layer' })` + `useSceneUuidBinding(anchorUid, uuid)` — scene-based z-ordering
 - `useNativeLayerLifecycle({ enabled, create, remove })` — `null → false → uuid` state machine
 
 ### Open questions

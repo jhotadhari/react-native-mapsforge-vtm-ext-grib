@@ -157,7 +157,8 @@ stuck on is what vtm already provides via its Mercator projection matrix — a c
   lookup on the native side.
 
 - **Multi-parameter stacking** — particles (wind) + contours (pressure) + color overlay
-  (temperature). Each is a separate native layer, stackable via `LayerOrderRegistry`.
+  (temperature). Each is a separate native layer, stackable via the scene-based layer
+  ordering (React tree order).
 
 ### Phase 5 — On-Device GRIB Parsing
 

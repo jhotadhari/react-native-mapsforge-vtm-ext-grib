@@ -12,11 +12,13 @@ import { WeatherOverlay } from 'react-native-mapsforge-vtm-ext-grib';
  * Before running, serve the sample data file so the native module can fetch it:
  *   cd example/data && python3 -m http.server 8000
  *
- * Then update DATA_URL below to point to your machine's IP (or 10.0.2.2 for
- * the Android emulator host loopback).
+ * Then point DATA_URL at the served file. For a physical device, forward the
+ * port with adb and use the device loopback:
+ *   adb reverse tcp:8000 tcp:8000
+ * (or set it to your machine's IP / 10.0.2.2 for the Android emulator host loopback).
  */
 // const DATA_URL = 'http://10.0.2.2:8000/sample-wind.json';	// emulator
-const DATA_URL = 'http://192.168.0.11:8000/sample-wind.json';	// physical device
+const DATA_URL = 'http://127.0.0.1:8000/sample-wind.json';	// physical device via adb reverse
 
 // Central Germany — the sample wind data covers 48-54°N, 6-14°E
 const defaultCenter: [number, number] = [10, 51];

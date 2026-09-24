@@ -11,13 +11,14 @@ temperature, pressure, precipitation, waves) as colored overlays on offline vect
 
 The parent library lives at `../react-native-mapsforge-vtm` (sibling directory). This extension
 was built as the first external consumer of the parent library's layer-type extension points —
-`MapHandleContext`, `useLayerOrder`, and `useNativeLayerLifecycle` — which were exported
-specifically to enable this library.
+`MapHandleContext`, `useLayerAnchor`, `useSceneUuidBinding`, and `useNativeLayerLifecycle` —
+which were exported specifically to enable this library. It targets `react-native-mapsforge-vtm@^0.9.0`
+(the scene-based ordering architecture).
 
 ## Common commands
 
-This is a Yarn workspaces package (`packageManager: yarn@3.6.1`). An `example/` workspace will
-be added for manual testing (not yet present — see Phase 2 planning in ROADMAP.md).
+This is a Yarn workspaces package (`packageManager: yarn@3.6.1`) with an `example/` workspace for
+manual testing.
 
 ```sh
 yarn                  # install deps (uses yarn workspaces)
@@ -32,20 +33,21 @@ yarn prepare          # bob build — builds lib/ (codegen + module + typescript
 
 ## Architecture
 
-### Extension pattern — three hooks from the parent library
+### Extension pattern — the scene-model hooks from the parent library
 
-This library does **not** duplicate the parent's layer infrastructure. It imports three hooks
+This library does **not** duplicate the parent's layer infrastructure. It imports hooks
 that the parent library exports as stable extension points:
 
 | Hook | Source | What it provides |
 |---|---|---|
-| `MapHandleContext` | `react-native-mapsforge-vtm` | React context with `nativeNodeHandle` (map view ID) and `LayerOrderRegistry` |
-| `useLayerOrder(uuid)` | `react-native-mapsforge-vtm` | Registers the component's position in render order, returns `{ nativeNodeHandle, positionIndex, fragmentUuid }` |
+| `MapHandleContext` | `react-native-mapsforge-vtm` | React context with `nativeNodeHandle` (map view ID) + `scene` + `sync` |
+| `useLayerAnchor({ kind: 'layer' })` | `react-native-mapsforge-vtm` | Renders an anchor + registers it with the scene, so `reorderLayers` positions the layer by tree order |
+| `useSceneUuidBinding(anchorUid, uuid)` | `react-native-mapsforge-vtm` | Binds the resolved native uuid to the anchor uid |
 | `useNativeLayerLifecycle({ enabled, create, remove })` | `react-native-mapsforge-vtm` | Manages `null → false → uuid` state machine; callers only provide `create`/`remove` callbacks that return Promises |
 
-Any future layer-type extension (traffic, thermal, radar) would use exactly these same three hooks.
-The pattern is: `MapHandleContext` for map identity, `useLayerOrder` for z-ordering,
-`useNativeLayerLifecycle` for create/remove lifecycle.
+The pattern is: `MapHandleContext` for map identity, `useLayerAnchor` + `useSceneUuidBinding`
+for scene-based z-ordering, `useNativeLayerLifecycle` for create/remove lifecycle. Any future
+layer-type extension (traffic, thermal, radar) would use these same hooks.
 
 ### Data flow
 
@@ -117,10 +119,8 @@ imported types.
 
 After running `yarn prepare` (bob build), codegen generates
 `android/generated/java/.../NativeWeatherOverlaySpec.java`. The hand-written
-`WeatherOverlay.java` currently extends `ReactContextBaseJavaModule` directly with `@ReactMethod`
-annotations. After codegen runs, it should be switched to extend `NativeWeatherOverlaySpec`
-(the generated base class) — matching how the parent library's modules extend their generated
-specs.
+`WeatherOverlay.java` extends `NativeWeatherOverlaySpec` (the generated base class) — matching
+how the parent library's modules extend their generated specs.
 
 ## Parent library gotchas
 
@@ -169,19 +169,17 @@ automatically since it uses the parent's `useMapPosition`.
 - **No real iOS implementation.** The `ios/` stub exists because codegen requires it, but
   there is no iOS rendering backend. All native code is under `android/`.
 - **JSON data format only for Phase 1.** On-device GRIB parsing (JGribX + jj2000) is Phase 5.
-- **The parent library must be on a branch that has the extension-point exports**
-  (`MapHandleContext`, `useLayerOrder`, `useNativeLayerLifecycle`) and the fractional-zoom
-  fix (`getZoom()` instead of `getZoomLevel()` in `MapFragment.java`).
+- **The parent library must be `react-native-mapsforge-vtm@^0.9.0`** — it exports the scene-model
+  extension points (`MapHandleContext`, `useLayerAnchor`, `useSceneUuidBinding`,
+  `useNativeLayerLifecycle`) and the fractional-zoom fix (`getZoom()` instead of `getZoomLevel()`
+  in `MapFragment.java`).
 - `react-native-reanimated` and `react-native-worklets` are optional peer dependencies
   (used only by `src/reanimated/useWeatherAnimation.ts`).
 
 ## What's not here yet
 
 See `ROADMAP.md` for the full plan. The biggest gaps:
-- No `example/` workspace app (Phase 2)
 - Time animation uses the reanimated hook but doesn't wire it to dual-layer crossfade (Phase 2)
 - No custom vtm `Layer` subclass — tile-based only (Phase 3)
 - No wind particles, barbs, contours, or cursor readout (Phase 4)
 - No on-device GRIB parsing — server-side JSON only (Phase 5)
-- `WeatherOverlay.java` extends `ReactContextBaseJavaModule` directly — needs switch to
-  generated `NativeWeatherOverlaySpec` after codegen runs
