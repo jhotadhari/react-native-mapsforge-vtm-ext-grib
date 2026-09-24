@@ -2260,9 +2260,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jhotadhari/release-kit@npm:^0.0.6":
-  version: 0.0.6
-  resolution: "@jhotadhari/release-kit@npm:0.0.6"
+"@jhotadhari/release-kit@npm:^0.0.9":
+  version: 0.0.9
+  resolution: "@jhotadhari/release-kit@npm:0.0.9"
   dependencies:
     "@octokit/rest": ^22.0.1
     commander: ^15.0.0
@@ -2273,7 +2273,7 @@ __metadata:
     tsx: ^4.22.4
   bin:
     release-kit: bin/release-kit.js
-  checksum: 07a2331f410d59e2c97bb031c0a50c35a75a7ecc99b08e34623eff3dfb4990515c2e28026fbe036ffa5165d242731ab2e9a8bf2cde889670da86e1304b4ddd89
+  checksum: 009e697e38b8a18d13d83820519777f36683476ab0dcb8c3ef170dde4a36d097e6fd47a7d601f1b6e19c1d8c2e6e2bc629cd55e119641798d4983eb278989242
   languageName: node
   linkType: hard
 
@@ -8492,7 +8492,7 @@ __metadata:
     "@eslint/eslintrc": ^3.3.5
     "@eslint/js": ^9.22.0
     "@evilmartians/lefthook": ^2.1.9
-    "@jhotadhari/release-kit": ^0.0.6
+    "@jhotadhari/release-kit": ^0.0.9
     "@react-native/eslint-config": ^0.86.0
     "@types/jest": ^29.5.5
     "@types/react": ^19.2.17
