@@ -1,0 +1,185 @@
+# AGENTS.md
+
+This file provides guidance to OpenCode when working with code in this repository.
+
+## What this is
+
+`react-native-mapsforge-vtm-ext-grib` is a React Native library that adds weather GRIB overlay
+capability on top of `react-native-mapsforge-vtm`. It renders gridded weather data (wind,
+temperature, pressure, precipitation, waves) as colored overlays on offline vector maps.
+**Android only** — matches the platform scope of the parent library.
+
+The parent library lives at `../react-native-mapsforge-vtm` (sibling directory). This extension
+was built as the first external consumer of the parent library's layer-type extension points —
+`MapHandleContext`, `useLayerAnchor`, `useSceneUuidBinding`, and `useNativeLayerLifecycle` —
+which were exported specifically to enable this library. It targets `react-native-mapsforge-vtm@^0.9.0`
+(the scene-based ordering architecture).
+
+## Common commands
+
+This is a Yarn workspaces package (`packageManager: yarn@3.6.1`) with an `example/` workspace for
+manual testing.
+
+```sh
+yarn                  # install deps (uses yarn workspaces)
+yarn typecheck        # tsc — no emit, just checks
+yarn lint             # eslint over **/*.{js,ts,tsx} (flat config, eslint.config.mjs)
+yarn format           # prettier . --write
+yarn clean            # del-cli android/build lib
+yarn prepare          # bob build — builds lib/ (codegen + module + typescript) from src/
+```
+
+`lefthook.yml` runs `eslint` and `tsc` on staged `*.{js,ts,jsx,tsx}` files as a pre-commit hook.
+
+## Architecture
+
+### Extension pattern — the scene-model hooks from the parent library
+
+This library does **not** duplicate the parent's layer infrastructure. It imports hooks
+that the parent library exports as stable extension points:
+
+| Hook | Source | What it provides |
+|---|---|---|
+| `MapHandleContext` | `react-native-mapsforge-vtm` | React context with `nativeNodeHandle` (map view ID) + `scene` + `sync` |
+| `useLayerAnchor({ kind: 'layer' })` | `react-native-mapsforge-vtm` | Renders an anchor + registers it with the scene, so `reorderLayers` positions the layer by tree order |
+| `useSceneUuidBinding(anchorUid, uuid)` | `react-native-mapsforge-vtm` | Binds the resolved native uuid to the anchor uid |
+| `useNativeLayerLifecycle({ enabled, create, remove })` | `react-native-mapsforge-vtm` | Manages `null → false → uuid` state machine; callers only provide `create`/`remove` callbacks that return Promises |
+
+The pattern is: `MapHandleContext` for map identity, `useLayerAnchor` + `useSceneUuidBinding`
+for scene-based z-ordering, `useNativeLayerLifecycle` for create/remove lifecycle. Any future
+layer-type extension (traffic, thermal, radar) would use these same hooks.
+
+### Data flow
+
+```
+JS (React)                              Native (Java)
+──────────                              ──────────────
+<WeatherOverlay
+  dataUrl="https://..."           →     WeatherOverlay.java
+  parameter="WIND"                       ├─ fetch JSON via HTTP
+  timeIndex={0}                          ├─ parse to WeatherGridData
+  colorMap="wind"                        ├─ create WeatherTileSource
+  opacity={0.7}                          ├─ wrap in BitmapTileLayer
+/>                                       └─ addLayerAsync(layer) → MapMutationQueue
+```
+
+### Native side — custom TileSource (not a custom Layer)
+
+Phase 1 uses the **TileSource pattern** (proven by `HillshadingTileSource` in the parent library):
+
+```
+WeatherTileSource extends TileSource
+  └─ getDataSource() → WeatherTileDataSource implements ITileDataSource
+       └─ query(MapTile tile, ITileDataSink sink)
+            ├─ tileToBoundingBox(tile.tileX, tile.tileY, tile.zoomLevel) → lat/lon bounds
+            ├─ grid.getValueAt(lat, lng) per pixel → bilinear interpolation
+            ├─ ColorRamp.getColor(value) → ARGB int
+            ├─ Bitmap.setPixels() → sink.setTileImage(bitmap)
+            └─ sink.completed(QueryResult.SUCCESS)
+```
+
+`WeatherTileDataSource.query()` is called by vtm's tile manager on a **background thread**.
+Bitmap rendering is thread-safe because it only reads `WeatherGridData`, which is immutable
+after construction. No synchronization needed.
+
+**Phase 3 (planned) replaces this with `WeatherGridLayer extends org.oscim.layers.Layer`**
+for GPU-level interpolation and particle animation. The JS API (`<WeatherOverlay>`)
+stays identical — only the native backend changes.
+
+### Threading
+
+This library inherits the parent's threading model:
+- `MapMutationQueue.flush()` runs on the **UI thread** (Main Looper) — the only place that
+  calls `layers().add/remove` and batch-level `updateMap()`
+- `WeatherTileDataSource.query()` runs on vtm's **tile worker thread** (background)
+- `WeatherOverlay.java` module methods run on the **native modules thread** (TurboModule)
+- `fetchAndParseGridData()` runs on the native modules thread — blocks until HTTP completes
+  (acceptable for initial load; should move to a background thread for large files)
+
+### Java package layout
+
+```
+android/src/main/java/com/jhotadhari/reactnative/mapsforge/vtm/ext/grib/
+  ExtGribPackage.java           — ReactPackage, registers WeatherOverlay module
+  modules/
+    WeatherOverlay.java         — TurboModule: createLayer, removeLayer, setOpacity, etc.
+  tiles/
+    WeatherTileSource.java      — extends TileSource (direct, not UrlTileSource)
+    WeatherTileDataSource.java  — implements ITileDataSource, per-tile bitmap render
+    WeatherGridData.java        — immutable in-memory grid with bilinear getValueAt()
+    ColorRamp.java              — 6 built-in meteorological color ramps
+```
+
+### Codegen considerations
+
+`src/NativeModules/NativeWeatherOverlay.ts` is the codegen spec. Types used in the `Spec`
+interface **must be declared inline** — react-native-codegen's TypeScript parser cannot follow
+imports. The `WeatherOverlayProps` type (used by the React component, not by the spec) can use
+imported types.
+
+After running `yarn prepare` (bob build), codegen generates
+`android/generated/java/.../NativeWeatherOverlaySpec.java`. The hand-written
+`WeatherOverlay.java` extends `NativeWeatherOverlaySpec` (the generated base class) — matching
+how the parent library's modules extend their generated specs.
+
+## Parent library gotchas
+
+These were discovered while debugging the parent library's reanimated overlay example.
+They apply to this extension if it uses `useMapOverlay` / `toScreenPosition` for spatial
+overlays (weather icons, cursor readout, wind barbs as markers).
+
+### responseInclude is no longer needed
+
+The parent library no longer gates position fields behind `responseInclude` —
+all fields are always emitted. This section is kept for historical reference.
+
+### 60fps position events — no throttle, no configuration
+
+The parent library's `onMapUpdate` fires every vtm frame at 60fps with all
+position fields always present. There is no rate limiter, no `responseInclude`
+gating, and no `mapUpdateInterval` prop — position updates are always at full
+frame rate.
+
+Usage:
+```tsx
+const pos = useMapPosition();
+<MapContainer onMapUpdate={pos.handleMapUpdate}>
+```
+
+This extension inherits 60fps tracking automatically when using the parent's
+`useMapPosition()` — no code changes or configuration needed.
+
+### Bearing and tilt are fully supported
+
+The parent library's `toScreenPosition` and `fromScreenPosition` in `mercatorUtils.ts`
+account for bearing (map rotation) and tilt (perspective) via rotation-matrix +
+orthographic-foreshortening worklet math. Overlays track correctly on rotated and
+tilted maps — no limitations, no configuration needed.
+
+### Fractional zoom — use getZoom(), not getZoomLevel()
+
+vtm's `MapPosition.getZoomLevel()` returns `int` — truncated during pinch-zoom.
+The parent library's `MapFragment` was fixed to use `getZoom()` (returns `double`)
+so reanimated overlays track smoothly through fractional zoom levels (e.g. 2.7).
+This is a native-side fix — no JS changes needed, and this extension inherits it
+automatically since it uses the parent's `useMapPosition`.
+
+## Key constraints
+
+- **No real iOS implementation.** The `ios/` stub exists because codegen requires it, but
+  there is no iOS rendering backend. All native code is under `android/`.
+- **JSON data format only for Phase 1.** On-device GRIB parsing (JGribX + jj2000) is Phase 5.
+- **The parent library must be `react-native-mapsforge-vtm@^0.9.0`** — it exports the scene-model
+  extension points (`MapHandleContext`, `useLayerAnchor`, `useSceneUuidBinding`,
+  `useNativeLayerLifecycle`) and the fractional-zoom fix (`getZoom()` instead of `getZoomLevel()`
+  in `MapFragment.java`).
+- `react-native-reanimated` and `react-native-worklets` are optional peer dependencies
+  (used only by `src/reanimated/useWeatherAnimation.ts`).
+
+## What's not here yet
+
+See `ROADMAP.md` for the full plan. The biggest gaps:
+- Time animation uses the reanimated hook but doesn't wire it to dual-layer crossfade (Phase 2)
+- No custom vtm `Layer` subclass — tile-based only (Phase 3)
+- No wind particles, barbs, contours, or cursor readout (Phase 4)
+- No on-device GRIB parsing — server-side JSON only (Phase 5)

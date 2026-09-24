@@ -1,12 +1,23 @@
 node_modules/
 lib/
+.release-kit-state.json
 android/build/
 android/generated/
 example/node_modules/
 example/android/build/
 example/android/app/build/
 example/android/.gradle/
+example/android/app/.cxx/
+example/android/local.properties
 *.log
 .DS_Store
 ios/
 .yalc/
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions

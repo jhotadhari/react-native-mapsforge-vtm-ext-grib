@@ -97,13 +97,12 @@ already in vtm's OpenGL pipeline, so changing opacity costs a single uniform wri
 - `src/reanimated/useWeatherAnimation.ts` already exists — hook into it
 
 **Parent library requirements (discovered during overlay debugging):**
-- `<MapContainer mapUpdateInterval={16} />` — reduces the native event throttle from 40ms
-  (~25fps) to 16ms (~60fps) so spatial overlays track smoothly during pan/zoom
-- `<MapContainer responseInclude={pos.responseInclude} />` — must spread the full
-  `useMapPosition().responseInclude` (includes `center: 2`, `zoomLevel: 2`,
-  `viewportWidth: 2`, `viewportHeight: 2`), not just viewport dimensions
+- `<MapContainer onMapUpdate={pos.handleMapUpdate} />` — fires every vtm frame at
+  60fps with all position fields always present. No throttle, no `responseInclude`
+  gating, no `mapUpdateInterval` prop. Inherited automatically by this extension
+  when using the parent's `useMapPosition()`.
 - The parent library's `MapFragment.java` must use `getZoom()` (fractional double)
-  instead of `getZoomLevel()` (truncated int) — fixed in parent as of 2026-07-03
+  instead of `getZoomLevel()` (truncated int) — fixed in parent as of 2026-07-04
 
 ### Phase 3 — Custom vtm Layer (GPU Interpolation + Particles)
 
@@ -158,7 +157,8 @@ stuck on is what vtm already provides via its Mercator projection matrix — a c
   lookup on the native side.
 
 - **Multi-parameter stacking** — particles (wind) + contours (pressure) + color overlay
-  (temperature). Each is a separate native layer, stackable via `LayerOrderRegistry`.
+  (temperature). Each is a separate native layer, stackable via the scene-based layer
+  ordering (React tree order).
 
 ### Phase 5 — On-Device GRIB Parsing
 

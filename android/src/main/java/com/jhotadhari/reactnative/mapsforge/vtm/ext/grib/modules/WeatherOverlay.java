@@ -4,10 +4,10 @@ import androidx.annotation.NonNull;
 
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
-import com.facebook.react.module.annotations.ReactModule;
+
+import com.jhotadhari.reactnative.mapsforge.vtm.ext.grib.NativeWeatherOverlaySpec;
 
 import org.oscim.android.MapView;
 import org.oscim.layers.tile.bitmap.BitmapTileLayer;
@@ -23,6 +23,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 // These are public classes in the parent library react-native-mapsforge-vtm
@@ -30,16 +31,23 @@ import com.jhotadhari.reactnative.mapsforge.vtm.Utils;
 import com.jhotadhari.reactnative.mapsforge.vtm.LayerHelper;
 import com.jhotadhari.reactnative.mapsforge.vtm.LayerZoomBoundsHelper;
 
-@ReactModule(name = WeatherOverlay.NAME)
-public class WeatherOverlay extends ReactContextBaseJavaModule {
-
-    public static final String NAME = "WeatherOverlay";
+public class WeatherOverlay extends NativeWeatherOverlaySpec {
 
     private final LayerHelper layerHelper;
     private final LayerZoomBoundsHelper zoomBoundsHelper;
 
-    // In-memory cache of parsed grid data, keyed by dataUrl + "|" + parameter.
-    private final Map<String, WeatherGridData> gridCache = new HashMap<>();
+    // In-memory cache of parsed grid data, keyed by dataUrl + "|" + parameter + "|" + timeIndex.
+    // LRU eviction with a reasonable cap — each grid is ~128 KB+, and unbounded
+    // retention across URL/parameter/timestep combinations would cause OOM.
+    private static final int MAX_GRID_CACHE_SIZE = 32;
+    private final Map<String, WeatherGridData> gridCache = new LinkedHashMap<String, WeatherGridData>(
+            16, 0.75f, true  // access-order for LRU
+    ) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, WeatherGridData> eldest) {
+            return size() > MAX_GRID_CACHE_SIZE;
+        }
+    };
 
     public WeatherOverlay(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -49,13 +57,7 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
 
     @NonNull
     @Override
-    public String getName() {
-        return NAME;
-    }
-
-    @NonNull
-    @Override
-    public Map<String, Object> getConstants() {
+    public Map<String, Object> getTypedExportedConstants() {
         final Map<String, Object> constants = new HashMap<>();
         constants.put("dataUrl", "");
         constants.put("parameter", "WIND");
@@ -75,6 +77,7 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void createLayer(ReadableMap params, Promise promise) {
+        android.util.Log.d("WeatherOverlay", "createLayer called with params: " + params.toString());
         try {
             if (!Utils.rMapHasKey(params, "nativeNodeHandle")) {
                 Utils.promiseReject(promise, "Undefined nativeNodeHandle");
@@ -91,7 +94,7 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
             }
 
             // Get params, assign defaults.
-            Map<String, Object> defaults = getConstants();
+            Map<String, Object> defaults = getTypedExportedConstants();
             String dataUrl = Utils.rMapHasKey(params, "dataUrl")
                 ? params.getString("dataUrl") : (String) defaults.get("dataUrl");
             String parameter = Utils.rMapHasKey(params, "parameter")
@@ -108,19 +111,13 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
                 ? params.getInt("zoomMax") : (int) defaults.get("zoomMax");
 
             // Load grid data (cached in memory after first load).
-            String cacheKey = dataUrl + "|" + parameter;
+            // Include timeIndex in the key so different timesteps of the
+            // same URL+parameter are cached independently.
+            String cacheKey = dataUrl + "|" + parameter + "|" + timeIndex;
             WeatherGridData gridData = gridCache.get(cacheKey);
             if (gridData == null) {
                 gridData = fetchAndParseGridData(dataUrl, parameter, timeIndex);
-                if (gridData != null) {
-                    gridCache.put(cacheKey, gridData);
-                }
-            }
-
-            if (gridData == null) {
-                Utils.promiseReject(promise,
-                    "Unable to load weather data from: " + dataUrl);
-                return;
+                gridCache.put(cacheKey, gridData);
             }
 
             // Create the tile source (HillshadingTileSource pattern).
@@ -203,19 +200,28 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
 
             double opacity = Utils.rMapHasKey(params, "opacity")
                 ? params.getDouble("opacity")
-                : (double) getConstants().get("opacity");
+                : (double) getTypedExportedConstants().get("opacity");
 
-            BitmapTileLayer layer = (BitmapTileLayer) layerHelper
-                .getLayers(params.getInt("nativeNodeHandle"))
-                .get(params.getString("uuid"));
+            // Route through the UI thread — BitmapTileLayer.setBitmapAlpha
+            // triggers a map redraw and must not be called from the bridge
+            // thread (consistent with the core library's threading model).
+            com.facebook.react.bridge.UiThreadUtil.runOnUiThread(() -> {
+                try {
+                    BitmapTileLayer layer = (BitmapTileLayer) layerHelper
+                        .getLayers(params.getInt("nativeNodeHandle"))
+                        .get(params.getString("uuid"));
 
-            if (null == layer) {
-                Utils.promiseReject(promise, "Unable to find layer");
-                return;
-            }
+                    if (null == layer) {
+                        Utils.promiseReject(promise, "Unable to find layer");
+                        return;
+                    }
 
-            layer.setBitmapAlpha((float) opacity, true);
-            promise.resolve(params.getString("uuid"));
+                    layer.setBitmapAlpha((float) opacity, true);
+                    promise.resolve(params.getString("uuid"));
+                } catch (Exception e) {
+                    Utils.promiseReject(promise, e.getMessage());
+                }
+            });
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -232,10 +238,12 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
                 return;
             }
 
-            // In Phase 1, changing the time index requires recreating the tile
-            // source. The JS side handles this via the remove+create pattern in
-            // the WeatherOverlay component's useEffect for timeIndex changes.
-            // Phase 2+ will add in-place interpolation support.
+            // Time index changes are handled by the JS side via the
+            // remove+create pattern in WeatherOverlay's recreate useEffect
+            // (timeIndex is in its dependency array). The recreate path
+            // fetches fresh data with the correct cache key and creates a
+            // new WeatherTileSource. This method exists for API symmetry
+            // and future in-place interpolation support.
             promise.resolve(params.getString("uuid"));
 
         } catch (Exception e) {
@@ -293,7 +301,9 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
 
             JSONArray timeSteps = root.getJSONArray("timeSteps");
             if (timeIndex < 0 || timeIndex >= timeSteps.length()) {
-                return null;
+                throw new IllegalArgumentException(
+                    "timeIndex " + timeIndex + " out of range [0, " + (timeSteps.length() - 1) + "]"
+                );
             }
 
             JSONObject step = timeSteps.getJSONObject(timeIndex);
@@ -321,7 +331,9 @@ public class WeatherOverlay extends ReactContextBaseJavaModule {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            throw new RuntimeException(
+                "Failed to load weather data from " + dataUrl + ": " + e.toString()
+            );
         } finally {
             if (connection != null) {
                 connection.disconnect();
